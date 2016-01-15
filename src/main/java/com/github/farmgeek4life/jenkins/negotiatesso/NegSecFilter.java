@@ -70,8 +70,9 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
     private boolean redirectEnabled = false;
     private String redirect = "yourdomain.com";
     private boolean allowLocalhost = true;
+
     private static final String NOTIFY_COMMIT = "/notifyCommit";
-    private static final String[] PATHS_NOT_AUTHENTICATED = {"userContent", "cli", "jnlpJars", "whoAmI", "bitbucket-hook", "login"};
+    private static final String[] PATHS_NOT_AUTHENTICATED = {"userContent", "cli", "jnlpJars", "whoAmI", "bitbucket-hook", "login","tcpSlaveAgentListener"};
     
     /**
      * Add call to advertise Jenkins headers, as appropriate.
