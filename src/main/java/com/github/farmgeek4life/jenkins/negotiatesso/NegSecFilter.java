@@ -72,7 +72,7 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
     private boolean allowLocalhost = true;
 
     private static final String NOTIFY_COMMIT = "/notifyCommit";
-    private static final String[] PATHS_NOT_AUTHENTICATED = {"userContent", "cli", "jnlpJars", "whoAmI", "bitbucket-hook", "login","tcpSlaveAgentListener"};
+    private static final String[] PATHS_NOT_AUTHENTICATED = {"userContent", "cli", "jnlpJars", "whoAmI", "bitbucket-hook", "login", "tcpSlaveAgentListener", "buildByToken"};
     
     /**
      * Add call to advertise Jenkins headers, as appropriate.
@@ -97,6 +97,7 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
         String requestUri = httpRequest.getRequestURI();
         LOGGER.log(Level.FINER, "Request URI: " + requestUri);        
         if(!requiresSecurity(context, requestUri)) {
+			LOGGER.log(Level.FINER, "Bypassing KER-AUTH for " + requestUri);
             chain.doFilter(request, response);
             return;
         }
@@ -144,9 +145,9 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
     		if(StringUtils.isNotBlank(contextPath)) {
     			matchString = contextPath + "/" + token; 
     		} else {
-    			matchString = token;
+    			matchString = "/" + token;
     		}
-            if (requestURI.equals(matchString) || requestURI.startsWith(matchString + "/")) {
+            if (requestURI.equals(matchString) || requestURI.startsWith(matchString + "/") || requestURI.startsWith(matchString + "?")) {
             	return false;
             }
     	}
