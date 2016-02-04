@@ -41,6 +41,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Collections;
 import java.util.StringTokenizer;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -49,6 +50,10 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.acegisecurity.context.SecurityContextHolder;
+import org.apache.commons.lang.StringUtils;
+
+import com.google.common.annotations.VisibleForTesting;
+
 import waffle.servlet.NegotiateSecurityFilter;
 //import waffle.servlet.spi.SecurityFilterProviderCollection;
 //import waffle.servlet.spi.BasicSecurityFilterProvider;
@@ -64,7 +69,8 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
     private boolean redirectEnabled = false;
     private String redirect = "yourdomain.com";
     private boolean allowLocalhost = true;
-    private final String pathsNotAuthenticated = "userContent;cli;git;jnlpJars;subversion;whoAmI;bitbucket-hook;";
+    private static final String NOTIFY_COMMIT = "/notifyCommit";
+    private static final String[] PATHS_NOT_AUTHENTICATED = {"userContent", "cli", "jnlpJars", "whoAmI", "bitbucket-hook", "login"};
     
     /**
      * Add call to advertise Jenkins headers, as appropriate.
@@ -83,21 +89,13 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
         }
         
         HttpServletRequest httpRequest = (HttpServletRequest)request;
-        String contextPath = httpRequest.getContextPath();
-        String requestURI = httpRequest.getRequestURI();
-        
-        StringTokenizer notAuthPathsTokenizer = new StringTokenizer(pathsNotAuthenticated, ";");
-        while (notAuthPathsTokenizer.hasMoreTokens()) {
-            String token = notAuthPathsTokenizer.nextToken();
-            if (token.length() < 1) {
-                continue;
-            }
-            
-            String matchString = contextPath + "/" + token;
-            if (requestURI.equals(matchString) || requestURI.startsWith(matchString + "/")) {
-                chain.doFilter(request, response);
-                return;
-            }
+        String context = httpRequest.getContextPath();
+        LOGGER.log(Level.FINER, "Jenkins context: " + context);
+        String requestUri = httpRequest.getRequestURI();
+        LOGGER.log(Level.FINER, "Request URI: " + requestUri);        
+        if(!requiresSecurity(context, requestUri)) {
+            chain.doFilter(request, response);
+            return;
         }
         
         if (this.allowLocalhost && httpRequest.getLocalAddr().equals(httpRequest.getRemoteAddr())) {
@@ -135,7 +133,31 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
         super.doFilter(request, response, chain); // This will also call the filter chaining
     }
     
-    private static boolean containsBypassHeader(ServletRequest request) {
+    @VisibleForTesting
+    static boolean requiresSecurity(String contextPath, String requestURI) {
+    	for(String token: PATHS_NOT_AUTHENTICATED) {
+    		String matchString;
+    		if(StringUtils.isNotBlank(contextPath)) {
+    			matchString = contextPath + "/" + token; 
+    		} else {
+    			matchString = token;
+    		}
+            if (requestURI.equals(matchString) || requestURI.startsWith(matchString + "/")) {
+            	return false;
+            }
+    	}
+    	
+    	if(requestURI.contains(NOTIFY_COMMIT)) {
+    		String requestBeforeNotifyCommit = requestURI.substring(0, requestURI.indexOf(NOTIFY_COMMIT) + 1);
+    		if(!requestBeforeNotifyCommit.contains("job/")) {
+    			return false;
+    		}
+    	}
+
+    	return true;
+	}
+
+	private static boolean containsBypassHeader(ServletRequest request) {
         if (!(request instanceof HttpServletRequest)) {
             return false;
         }
