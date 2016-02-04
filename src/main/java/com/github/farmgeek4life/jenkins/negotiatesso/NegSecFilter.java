@@ -53,6 +53,8 @@ import org.acegisecurity.context.SecurityContextHolder;
 import org.apache.commons.lang.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import jenkins.model.Jenkins;
+import org.acegisecurity.AccessDeniedException;
 
 import waffle.servlet.NegotiateSecurityFilter;
 //import waffle.servlet.spi.SecurityFilterProviderCollection;
@@ -93,9 +95,9 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
         String context = httpRequest.getContextPath();
         LOGGER.log(Level.FINER, "Jenkins context: " + context);
         String requestUri = httpRequest.getRequestURI();
-        LOGGER.log(Level.FINER, "Request URI: " + requestUri);        
-        if(!requiresSecurity(context, requestUri)) {
-			LOGGER.log(Level.FINER, "Bypassing KER-AUTH for " + requestUri);
+        LOGGER.log(Level.FINER, "Request URI: " + requestUri);
+        if (!requiresAuthentication(context, requestUri)) {
+			LOGGER.log(Level.FINER, "Bypassing authentication for " + requestUri);
             chain.doFilter(request, response);
             return;
         }
@@ -136,7 +138,24 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
     }
     
     @VisibleForTesting
-    static boolean requiresSecurity(String contextPath, String requestURI) {
+    static boolean requiresAuthentication(String contextPath, String requestURI) {
+        Jenkins jenkins = Jenkins.getInstance();
+        if (jenkins == null) {
+            return true;
+        }
+        try {
+            Object requested = jenkins.getTarget();
+            // Either already has sufficient permissions, or does not need permissions
+            if (jenkins == requested) {
+                LOGGER.log(Level.FINER, "Skipping authentication challenge: not needed");
+                return false;
+            }
+        }
+        catch (AccessDeniedException e) {
+            return true;
+        }
+        
+        /*
     	for(String token: PATHS_NOT_AUTHENTICATED) {
     		String matchString;
     		if(StringUtils.isNotBlank(contextPath)) {
@@ -154,7 +173,7 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
     		if(!requestBeforeNotifyCommit.contains("job/")) {
     			return false;
     		}
-    	}
+    	}*/
 
     	return true;
 	}
