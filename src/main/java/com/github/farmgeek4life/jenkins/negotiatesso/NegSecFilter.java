@@ -53,8 +53,10 @@ import org.acegisecurity.context.SecurityContextHolder;
 import org.apache.commons.lang.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import jenkins.model.Jenkins;
 import org.acegisecurity.AccessDeniedException;
+import org.kohsuke.stapler.Stapler;
 
 import waffle.servlet.NegotiateSecurityFilter;
 //import waffle.servlet.spi.SecurityFilterProviderCollection;
@@ -93,9 +95,9 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
         
         HttpServletRequest httpRequest = (HttpServletRequest)request;
         String context = httpRequest.getContextPath();
-        LOGGER.log(Level.FINER, "Jenkins context: " + context);
+        //LOGGER.log(Level.FINER, "Jenkins context: " + context);
         String requestUri = httpRequest.getRequestURI();
-        LOGGER.log(Level.FINER, "Request URI: " + requestUri);
+        //LOGGER.log(Level.FINER, "Request URI: " + requestUri);
         if (!requiresAuthentication(context, requestUri)) {
 			LOGGER.log(Level.FINER, "Bypassing authentication for " + requestUri);
             chain.doFilter(request, response);
@@ -136,6 +138,24 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
         
         super.doFilter(request, response, chain); // This will also call the filter chaining
     }
+    /**
+     * Copied from Jenkins.ALWAYS_READABLE_PATHS. Should request a public access to it, or a split function.
+     * Urls that are always visible without READ permission.
+     *
+     * <p>See also:{@link #getUnprotectedRootActions}.
+     */
+    private static final ImmutableSet<String> ALWAYS_READABLE_PATHS = ImmutableSet.of(
+        "/login",
+        "/logout",
+        "/accessDenied",
+        "/adjuncts/",
+        "/error",
+        "/oops",
+        "/signup",
+        "/tcpSlaveAgentListener",
+        "/federatedLoginService/",
+        "/securityRealm"
+    ); 
     
     @VisibleForTesting
     static boolean requiresAuthentication(String contextPath, String requestURI) {
@@ -143,15 +163,49 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
         if (jenkins == null) {
             return true;
         }
+        // NOTES:
+        // Jenkins has private set ALWAYS_READABLE_PATHS, getUnprotectedRootAction(), and another
+        // test that are exceptions to the permissions check. jenkins.getTarget() runs all of these,
+        // but we only care about the exceptions to the permissions check.
+        
+        // Code copied from Jenkins.getTarget(); need the rest, but not the permission check.
+        String rest = requestURI; //Stapler.getCurrentRequest().getRestOfPath();
+        LOGGER.log(Level.FINEST, "Rest : " + rest);
+        for (String name : ALWAYS_READABLE_PATHS) {
+            if (rest.startsWith(name)) {
+                LOGGER.log(Level.FINEST, "NoAuthRequired: Always readable path");
+                return false;
+            }
+        }
+        
+        for (String name : jenkins.getUnprotectedRootActions()) {
+            if (rest.startsWith("/" + name + "/") || rest.equals("/" + name)) {
+                LOGGER.log(Level.FINEST, "NoAuthRequired: Unprotected root action");
+                return false;
+            }
+        }
+        
+        if (rest.matches("/computer/[^/]+/slave-agent[.]jnlp") 
+                && "true".equals(Stapler.getCurrentRequest().getParameter("encrypt"))) {
+                LOGGER.log(Level.FINEST, "NoAuthRequired: Slave agent jnlp");
+            return false;
+        }
+        
+        // If the current user has read permissions on the object
+        boolean hasRead = jenkins.hasPermission(Jenkins.READ);
+        String readOut = hasRead ? "" : "NOT ";
+        //LOGGER.log(Level.FINEST, "Path \"" + requestURI + "\" does " + readOut + "have read permissions for user.");
         try {
             Object requested = jenkins.getTarget();
-            // Either already has sufficient permissions, or does not need permissions
-            if (jenkins == requested) {
-                LOGGER.log(Level.FINER, "Skipping authentication challenge: not needed");
+            // Either already has sufficient permissions, or does not need permissions;
+            // But only do it for paths that are exceptions to the current user's permissions.
+            if (!hasRead && jenkins == requested) {
+                //LOGGER.log(Level.FINEST, "Skipping authentication challenge: not needed");
                 return false;
             }
         }
         catch (AccessDeniedException e) {
+            //LOGGER.log(Level.FINEST, "Access for user denied to path " + requestURI);
             return true;
         }
         

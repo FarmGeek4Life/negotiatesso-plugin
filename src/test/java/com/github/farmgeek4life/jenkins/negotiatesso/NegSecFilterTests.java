@@ -11,30 +11,30 @@ public class NegSecFilterTests {
 	
 	@Test
 	public void test_should_require_security() {
-		assertTrue(NegSecFilter.requiresSecurity("jenkins", "job/SomeJob"));
-		assertTrue(NegSecFilter.requiresSecurity("", 		"job/SomeJob"));
-		assertTrue(NegSecFilter.requiresSecurity("jenkins", "job/notifyCommit"));
+		assertTrue(NegSecFilter.requiresAuthentication("jenkins", "job/SomeJob"));
+		assertTrue(NegSecFilter.requiresAuthentication("", 		"job/SomeJob"));
+		assertTrue(NegSecFilter.requiresAuthentication("jenkins", "job/notifyCommit"));
 	}
 	
 	@Test
 	public void test_should_not_require_security() {
-		assertFalse(NegSecFilter.requiresSecurity("jenkins", 	"jenkins/cli"));
-		assertFalse(NegSecFilter.requiresSecurity("", 			"cli"));
-		assertFalse(NegSecFilter.requiresSecurity("jenkins", 	"jenkins/userContent"));
-		assertFalse(NegSecFilter.requiresSecurity("", 			"userContent"));
-		assertFalse(NegSecFilter.requiresSecurity("jenkins",	"jenkins/jnlpJars"));
-		assertFalse(NegSecFilter.requiresSecurity("", 			"jnlpJars"));
-		assertFalse(NegSecFilter.requiresSecurity("jenkins", 	"jenkins/whoAmI"));
-		assertFalse(NegSecFilter.requiresSecurity("", 			"whoAmI"));
-		assertFalse(NegSecFilter.requiresSecurity("jenkins", 	"jenkins/login"));
-		assertFalse(NegSecFilter.requiresSecurity("", 			"login"));
+		assertFalse(NegSecFilter.requiresAuthentication("jenkins", 	"jenkins/cli"));
+		assertFalse(NegSecFilter.requiresAuthentication("", 			"cli"));
+		assertFalse(NegSecFilter.requiresAuthentication("jenkins", 	"jenkins/userContent"));
+		assertFalse(NegSecFilter.requiresAuthentication("", 			"userContent"));
+		assertFalse(NegSecFilter.requiresAuthentication("jenkins",	"jenkins/jnlpJars"));
+		assertFalse(NegSecFilter.requiresAuthentication("", 			"jnlpJars"));
+		assertFalse(NegSecFilter.requiresAuthentication("jenkins", 	"jenkins/whoAmI"));
+		assertFalse(NegSecFilter.requiresAuthentication("", 			"whoAmI"));
+		assertFalse(NegSecFilter.requiresAuthentication("jenkins", 	"jenkins/login"));
+		assertFalse(NegSecFilter.requiresAuthentication("", 			"login"));
 
-		assertFalse(NegSecFilter.requiresSecurity("jenkins", 	"jenkins/git/notifyCommit"));
-		assertFalse(NegSecFilter.requiresSecurity("", 			"git/notifyCommit"));
-		assertFalse(NegSecFilter.requiresSecurity("jenkins", 	"jenkins/subversion/notifyCommit"));
-		assertFalse(NegSecFilter.requiresSecurity("", 			"subversion/notifyCommit"));
-		assertFalse(NegSecFilter.requiresSecurity("jenkins", 	"jenkins/mercurial/notifyCommit"));
-		assertFalse(NegSecFilter.requiresSecurity("", 			"mercurial/notifyCommit"));
+		assertFalse(NegSecFilter.requiresAuthentication("jenkins", 	"jenkins/git/notifyCommit"));
+		assertFalse(NegSecFilter.requiresAuthentication("", 			"git/notifyCommit"));
+		assertFalse(NegSecFilter.requiresAuthentication("jenkins", 	"jenkins/subversion/notifyCommit"));
+		assertFalse(NegSecFilter.requiresAuthentication("", 			"subversion/notifyCommit"));
+		assertFalse(NegSecFilter.requiresAuthentication("jenkins", 	"jenkins/mercurial/notifyCommit"));
+		assertFalse(NegSecFilter.requiresAuthentication("", 			"mercurial/notifyCommit"));
 		
 	}
 	
