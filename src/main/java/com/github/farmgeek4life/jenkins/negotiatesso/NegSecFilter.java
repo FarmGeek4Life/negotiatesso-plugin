@@ -98,7 +98,7 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
         //LOGGER.log(Level.FINER, "Jenkins context: " + context);
         String requestUri = httpRequest.getRequestURI();
         //LOGGER.log(Level.FINER, "Request URI: " + requestUri);
-        if (!requiresAuthentication(context, requestUri)) {
+        if (!requiresAuthentication(httpRequest, requestUri)) {
 			LOGGER.log(Level.FINER, "Bypassing authentication for " + requestUri);
             chain.doFilter(request, response);
             return;
@@ -158,7 +158,7 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
     ); 
     
     @VisibleForTesting
-    static boolean requiresAuthentication(String contextPath, String requestURI) {
+    static boolean requiresAuthentication(ServletRequest request, String requestURI) {
         Jenkins jenkins = Jenkins.getInstance();
         if (jenkins == null) {
             return true;
@@ -186,7 +186,7 @@ public final class NegSecFilter extends NegotiateSecurityFilter {
         }
         
         if (rest.matches("/computer/[^/]+/slave-agent[.]jnlp") 
-                && "true".equals(Stapler.getCurrentRequest().getParameter("encrypt"))) {
+                && "true".equals(request.getParameter("encrypt"))) {
                 LOGGER.log(Level.FINEST, "NoAuthRequired: Slave agent jnlp");
             return false;
         }
